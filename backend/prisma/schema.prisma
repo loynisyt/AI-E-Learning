@@ -8,6 +8,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  permissions Json?    // Array of permission strings
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 model User {
   id          String   @id @default(cuid())
   email       String   @unique
@@ -15,6 +25,8 @@ model User {
   password    String?
   provider    String   @default("credentials")
   firebaseUid String?  @unique
+  roleId      String   @default("student")
+  role        Role     @relation(fields: [roleId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   lessons     Lesson[]

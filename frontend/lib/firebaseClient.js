@@ -2,6 +2,7 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth, GoogleAuthProvider, FacebookAuthProvider, signInWithPopup } from "firebase/auth";
 
+
 const clientConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTHDOMAIN,
@@ -16,12 +17,22 @@ if (typeof window !== 'undefined' && !getApps().length) {
   initializeApp(clientConfig);
 }
 
-export const auth = getAuth();
+export const getAuthInstance = () => {
+  if (typeof window === 'undefined') {
+    throw new Error('Firebase auth not available on server');
+  }
+  if (!getApps().length) {
+    initializeApp(clientConfig);
+  }
+  return getAuth();
+};
+
 export const googleProvider = new GoogleAuthProvider();
 export const facebookProvider = new FacebookAuthProvider();
 
 export async function signInWithGooglePopup() {
   try {
+    const auth = getAuthInstance();
     const result = await signInWithPopup(auth, googleProvider);
     const idToken = await result.user.getIdToken();
     return { user: result.user, idToken };
@@ -33,6 +44,7 @@ export async function signInWithGooglePopup() {
 
 export async function signInWithFacebookPopup() {
   try {
+    const auth = getAuthInstance();
     const result = await signInWithPopup(auth, facebookProvider);
     const idToken = await result.user.getIdToken();
     return { user: result.user, idToken };
@@ -44,6 +56,7 @@ export async function signInWithFacebookPopup() {
 
 export async function signOut() {
   try {
+    const auth = getAuthInstance();
     await auth.signOut();
   } catch (error) {
     console.error('Sign-out error:', error);

@@ -1,5 +1,6 @@
 // backend/app/api/auth/session/route.js
 const { verifyIdToken } = require('../../../lib/firebaseAdmin');
+const { createOrUpdateUserFromFirebase } = require('../../../lib/auth');
 const { PrismaClient } = require('@prisma/client');
 const jwt = require('jsonwebtoken');
 
@@ -16,30 +17,8 @@ export async function POST(request) {
     // Verify Firebase token
     const tokenPayload = await verifyIdToken(idToken);
 
-    // Extract user data from token
-    const { email, name, uid: firebaseUid } = tokenPayload;
-
-    if (!email) {
-      return Response.json({ error: 'Email is required from Firebase token' }, { status: 400 });
-    }
-
-    // Upsert user in Prisma
-    const user = await prisma.user.upsert({
-      where: { email },
-      update: {
-        name: name || null,
-        provider: 'firebase',
-        firebaseUid,
-        updatedAt: new Date()
-      },
-      create: {
-        email,
-        name: name || null,
-        provider: 'firebase',
-        firebaseUid,
-        password: null // Firebase users don't need passwords
-      }
-    });
+    // Create or update user from Firebase token
+    const user = await createOrUpdateUserFromFirebase(tokenPayload);
 
     // Create a session JWT
     const sessionToken = jwt.sign(
@@ -47,7 +26,8 @@ export async function POST(request) {
         userId: user.id,
         email: user.email,
         name: user.name,
-        provider: user.provider
+        provider: user.provider,
+        role: user.role.name
       },
       process.env.NEXTAUTH_SECRET || 'fallback-secret-change-in-production',
       { expiresIn: '7d' }
@@ -59,7 +39,8 @@ export async function POST(request) {
         id: user.id,
         email: user.email,
         name: user.name,
-        provider: user.provider
+        provider: user.provider,
+        role: user.role.name
       },
       success: true
     });
@@ -73,8 +54,6 @@ export async function POST(request) {
   } catch (error) {
     console.error('Session creation error:', error);
     return Response.json({ error: 'Authentication failed' }, { status: 401 });
-  } finally {
-    await prisma.$disconnect();
   }
 }
 

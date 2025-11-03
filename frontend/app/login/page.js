@@ -1,4 +1,5 @@
 'use client';
+export const dynamic = 'force-dynamic';
 import { useState } from 'react';
 import { signIn } from "next-auth/react";
 import { useRouter } from 'next/navigation';
@@ -6,7 +7,6 @@ import { Button, TextField, Alert, CircularProgress } from '@mui/material';
 import Link from 'next/link';
 import GoogleIcon from '@mui/icons-material/Google';
 import FacebookIcon from '@mui/icons-material/Facebook';
-import { signInWithGooglePopup, signInWithFacebookPopup } from '@/lib/firebaseClient';
 
 export default function Login() {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -66,6 +66,7 @@ export default function Login() {
   const handleFirebaseSignIn = async (provider) => {
     setLoading(true);
     try {
+      const { signInWithGooglePopup, signInWithFacebookPopup } = await import('@/lib/firebaseClient');
       let result;
       if (provider === 'google') {
         result = await signInWithGooglePopup();

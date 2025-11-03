@@ -9,6 +9,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ai-elearning-network
 
   directus:
     image: directus/directus:latest
@@ -25,10 +27,14 @@ services:
       DB_DATABASE: "ai_elearning_db"
       DB_USER: "postgres"
       DB_PASSWORD: "postgres"
+      PUBLIC_URL: "http://localhost:8055"
     volumes:
       - ./directus/data:/data
+      - ./directus/uploads:/directus/uploads
     depends_on:
       - postgres
+    networks:
+      - ai-elearning-network
 
   backend:
     build: ./backend
@@ -37,6 +43,7 @@ services:
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - RUN_MIGRATE=${RUN_MIGRATE:-false}
+      - NEXT_PUBLIC_DIRECTUS_URL=http://directus:8055
     env_file:
       - ./.env.local
     volumes:
@@ -46,13 +53,16 @@ services:
     command: sh -c 'npx prisma generate && if [ "${RUN_MIGRATE}" = "true" ]; then npx prisma migrate deploy && npm run prisma:seed; fi && npm run dev'
     depends_on:
       - postgres
-
+      - directus
+    networks:
+      - ai-elearning-network
 
   frontend:
     build:
       context: ./frontend
       args:
         NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL}
+        NEXT_PUBLIC_DIRECTUS_URL: ${NEXT_PUBLIC_DIRECTUS_URL}
     ports:
       - "3000:3000"
     env_file:
@@ -63,6 +73,12 @@ services:
     depends_on:
       - directus
       - backend
+    networks:
+      - ai-elearning-network
+
+networks:
+  ai-elearning-network:
+    driver: bridge
 
 volumes:
   postgres_data:

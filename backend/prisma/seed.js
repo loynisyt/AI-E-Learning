@@ -8,6 +8,40 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Seeding database...');
 
+  // Seed roles
+  console.log('Creating roles...');
+  const adminRole = await prisma.role.upsert({
+    where: { name: 'admin' },
+    update: {},
+    create: {
+      name: 'admin',
+      description: 'Full system access',
+      permissions: ['read', 'write', 'delete', 'manage_users', 'manage_content']
+    }
+  });
+
+  const instructorRole = await prisma.role.upsert({
+    where: { name: 'instructor' },
+    update: {},
+    create: {
+      name: 'instructor',
+      description: 'Can create and manage educational content',
+      permissions: ['read', 'write', 'delete']
+    }
+  });
+
+  const studentRole = await prisma.role.upsert({
+    where: { name: 'student' },
+    update: {},
+    create: {
+      name: 'student',
+      description: 'Can access educational content',
+      permissions: ['read']
+    }
+  });
+
+  console.log('Roles created');
+
   // Seed Prisma admin user
   console.log('Creating Prisma admin user...');
   const hashedPassword = await bcrypt.hash('Loynis2020@', 10);
@@ -19,13 +53,15 @@ async function main() {
     update: {
       name: 'Administrator',
       password: hashedPassword,
-      provider: 'credentials'
+      provider: 'credentials',
+      roleId: adminRole.id
     },
     create: {
       email: 'admin@example.com',
       name: 'Administrator',
       password: hashedPassword,
-      provider: 'credentials'
+      provider: 'credentials',
+      roleId: adminRole.id
     }
   });
 

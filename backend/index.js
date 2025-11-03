@@ -4,6 +4,8 @@ const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const OpenAI = require('openai');
+const { authenticateFirebaseToken, requirePermissions, createOrUpdateUserFromFirebase } = require('./lib/auth');
+const { authenticateDirectus, getContent, createContent, updateContent, deleteContent } = require('./lib/directus');
 
 const prisma = new PrismaClient();
 const openai = new OpenAI({
@@ -14,18 +16,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Middleware to verify JWT token
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  if (!token) return res.sendStatus(401);
-
-  jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret_here', (err, user) => {
-    if (err) return res.sendStatus(403);
-    req.user = user;
-    next();
-  });
-};
+// Initialize Directus authentication on startup
+authenticateDirectus();
 
 // Auth endpoints
 app.post('/api/login', async (req, res) => {
@@ -80,54 +72,145 @@ app.post('/api/auth/create-oauth-user', async (req, res) => {
   }
 });
 
-// Lesson endpoints
+// Lesson endpoints (Prisma-based)
 app.get('/api/lessons', async (req, res) => {
-  const lessons = await prisma.lesson.findMany({
-    include: { createdBy: { select: { name: true } } },
-  });
-  res.json(lessons);
+  try {
+    const lessons = await prisma.lesson.findMany({
+      include: { createdBy: { select: { name: true } } },
+    });
+    res.json(lessons);
+  } catch (error) {
+    console.error('Error fetching lessons:', error);
+    res.status(500).json({ error: 'Failed to fetch lessons' });
+  }
 });
 
-app.post('/api/lessons', authenticateToken, async (req, res) => {
-  const { title, description, videoUrl, exerciseTitle, exerciseDescription, links } = req.body;
-  const lesson = await prisma.lesson.create({
-    data: {
-      title,
-      description,
-      videoUrl,
-      exerciseTitle,
-      exerciseDescription,
-      links,
-      createdById: req.user.id,
-    },
-  });
-  res.status(201).json(lesson);
+app.post('/api/lessons', authenticateFirebaseToken, requirePermissions(['write']), async (req, res) => {
+  try {
+    const { title, description, videoUrl, exerciseTitle, exerciseDescription, links } = req.body;
+
+    if (!title || !description) {
+      return res.status(400).json({ error: 'Title and description are required' });
+    }
+
+    const lesson = await prisma.lesson.create({
+      data: {
+        title,
+        description,
+        videoUrl,
+        exerciseTitle,
+        exerciseDescription,
+        links,
+        createdById: req.user.id,
+      },
+    });
+    res.status(201).json(lesson);
+  } catch (error) {
+    console.error('Error creating lesson:', error);
+    res.status(500).json({ error: 'Failed to create lesson' });
+  }
 });
 
-app.put('/api/lessons/:id', authenticateToken, async (req, res) => {
-  const { id } = req.params;
-  const { title, description, videoUrl, exerciseTitle, exerciseDescription, links } = req.body;
-  const lesson = await prisma.lesson.findUnique({ where: { id: parseInt(id) } });
-  if (!lesson || lesson.createdById !== req.user.id) return res.sendStatus(403);
-  const updatedLesson = await prisma.lesson.update({
-    where: { id: parseInt(id) },
-    data: { title, description, videoUrl, exerciseTitle, exerciseDescription, links },
-  });
-  res.json(updatedLesson);
+app.put('/api/lessons/:id', authenticateFirebaseToken, requirePermissions(['write']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, videoUrl, exerciseTitle, exerciseDescription, links } = req.body;
+
+    const lesson = await prisma.lesson.findUnique({ where: { id: parseInt(id) } });
+    if (!lesson) return res.status(404).json({ error: 'Lesson not found' });
+
+    // Check if user can edit (owner or admin)
+    if (lesson.createdById !== req.user.id && !req.user.role.permissions.includes('manage_content')) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const updatedLesson = await prisma.lesson.update({
+      where: { id: parseInt(id) },
+      data: { title, description, videoUrl, exerciseTitle, exerciseDescription, links },
+    });
+    res.json(updatedLesson);
+  } catch (error) {
+    console.error('Error updating lesson:', error);
+    res.status(500).json({ error: 'Failed to update lesson' });
+  }
 });
 
-app.delete('/api/lessons/:id', authenticateToken, async (req, res) => {
-  const { id } = req.params;
-  const lesson = await prisma.lesson.findUnique({ where: { id: parseInt(id) } });
-  if (!lesson || lesson.createdById !== req.user.id) return res.sendStatus(403);
-  await prisma.lesson.delete({ where: { id: parseInt(id) } });
-  res.sendStatus(204);
+app.delete('/api/lessons/:id', authenticateFirebaseToken, requirePermissions(['delete']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const lesson = await prisma.lesson.findUnique({ where: { id: parseInt(id) } });
+    if (!lesson) return res.status(404).json({ error: 'Lesson not found' });
+
+    // Check if user can delete (owner or admin)
+    if (lesson.createdById !== req.user.id && !req.user.role.permissions.includes('manage_content')) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    await prisma.lesson.delete({ where: { id: parseInt(id) } });
+    res.sendStatus(204);
+  } catch (error) {
+    console.error('Error deleting lesson:', error);
+    res.status(500).json({ error: 'Failed to delete lesson' });
+  }
+});
+
+// Directus CMS endpoints for educational content
+app.get('/api/content/:collection', authenticateFirebaseToken, requirePermissions(['read']), async (req, res) => {
+  try {
+    const { collection } = req.params;
+    const query = req.query;
+    const content = await getContent(collection, query);
+    res.json(content);
+  } catch (error) {
+    console.error('Error fetching content:', error);
+    res.status(500).json({ error: 'Failed to fetch content' });
+  }
+});
+
+app.post('/api/content/:collection', authenticateFirebaseToken, requirePermissions(['write']), async (req, res) => {
+  try {
+    const { collection } = req.params;
+    const data = req.body;
+    const content = await createContent(collection, data);
+    res.status(201).json(content);
+  } catch (error) {
+    console.error('Error creating content:', error);
+    res.status(500).json({ error: 'Failed to create content' });
+  }
+});
+
+app.put('/api/content/:collection/:id', authenticateFirebaseToken, requirePermissions(['write']), async (req, res) => {
+  try {
+    const { collection, id } = req.params;
+    const data = req.body;
+    const content = await updateContent(collection, id, data);
+    res.json(content);
+  } catch (error) {
+    console.error('Error updating content:', error);
+    res.status(500).json({ error: 'Failed to update content' });
+  }
+});
+
+app.delete('/api/content/:collection/:id', authenticateFirebaseToken, requirePermissions(['delete']), async (req, res) => {
+  try {
+    const { collection, id } = req.params;
+    await deleteContent(collection, id);
+    res.sendStatus(204);
+  } catch (error) {
+    console.error('Error deleting content:', error);
+    res.status(500).json({ error: 'Failed to delete content' });
+  }
 });
 
 // AI Chat endpoint with OpenAI integration
-app.post('/api/ai-chat', authenticateToken, async (req, res) => {
-  const { message, mode = 'teacher', temperature = 0.7 } = req.body;
+app.post('/api/ai-chat', authenticateFirebaseToken, requirePermissions(['read']), async (req, res) => {
   try {
+    const { message, mode = 'teacher', temperature = 0.7 } = req.body;
+
+    if (!message) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+
     const systemPrompt = mode === 'teacher'
       ? 'You are a helpful AI teacher specializing in teaching AI tools and prompting techniques. Provide educational, structured responses.'
       : 'You are a friendly AI companion specializing in AI tools and prompting. Be conversational and supportive.';

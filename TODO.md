@@ -1,23 +1,43 @@
-# AI E-Learning App Improvements
+# Backend and Authentication Implementation Plan
 
-## ✅ Completed Tasks
-- [x] Analyzed project structure and existing components
-- [x] Created comprehensive plan for mobile responsiveness, Dock, routing, AI chat, settings
-- [x] Update menuConfig.js to include AI Coach and Notifications items
-- [x] Create frontend/app/ai-coach/page.js with chat interface and voice features
-- [x] Create frontend/app/api/ai-chat/route.js for mocked AI responses
-- [x] Update frontend/pages/Settings.jsx with full MUI implementation
-- [x] Make all pages responsive (Courses, MyLearning, Profile, Settings, Dashboard)
-- [x] Integrate mobile Dock in layout.js
-- [x] Wire routing and ensure navigation works
-- [x] Add accessibility features (aria-labels, keyboard nav)
-- [x] Update Dock component with navigation and accessibility
-- [x] Add mobile dock styling with neon effects
+## 1. Database Schema Updates
+- [ ] Add Role model to Prisma schema
+- [ ] Add roleId to User model
+- [ ] Add permissions/roles to content models if needed
+- [ ] Run Prisma migrations
 
-## 🔄 In Progress Tasks
-- [ ] Add tests for new components
-- [ ] Update README.md with integration notes
-- [ ] Add animations and polish (glows, slide-up for Dock)
-- [ ] Create notifications page
-- [ ] Add more voice features and error handling
-- [ ] Optimize performance and bundle size
+## 2. Authentication Consolidation
+- [ ] Update backend to use Firebase for all authentication (email/password, Google, Facebook)
+- [ ] Replace custom JWT with Firebase token validation in all endpoints
+- [ ] Add middleware for Firebase token verification
+- [ ] Update login/register endpoints to use Firebase
+- [ ] Ensure social login endpoints work with Firebase
+
+## 3. Directus CMS Integration
+- [ ] Create Directus client with proper authentication
+- [ ] Add endpoints for educational content CRUD via Directus API
+- [ ] Implement role-based permissions for content access
+- [ ] Add content types (courses, lessons, etc.) in Directus
+- [ ] Update frontend Directus client if needed
+
+## 4. Role-Based Permissions
+- [ ] Implement role middleware (admin, instructor, student)
+- [ ] Add permission checks to all protected endpoints
+- [ ] Update user creation to assign default roles
+
+## 5. Docker Configuration
+- [ ] Update docker-compose.yml for proper networking
+- [ ] Ensure environment variables are injected correctly
+- [ ] Add Directus volumes and configs
+- [ ] Test build commands in Docker
+
+## 6. Error Handling and Validation
+- [ ] Add comprehensive error handling to all endpoints
+- [ ] Input validation for all API requests
+- [ ] Proper HTTP status codes and error messages
+
+## 7. Testing and Documentation
+- [ ] Test all authentication flows
+- [ ] Test Directus content operations
+- [ ] Update README with Docker run instructions
+- [ ] Ensure no hardcoded secrets (use env vars only)
