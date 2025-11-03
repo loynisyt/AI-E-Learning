@@ -1,0 +1,41 @@
+Note: Links for generating OAuth tokens and secrets.
+
+1. Google OAuth:
+   - Go to Google Cloud Console: https://console.cloud.google.com/
+   - Create a new project or select existing.
+   - Enable Google+ API.
+   - Create OAuth 2.0 credentials (Client ID and Client Secret).
+   - Set authorized redirect URIs to: http://localhost:3000/api/auth/callback/google (for local dev).
+   - Replace GOOGLE_ID and GOOGLE_SECRET in .env.local with the generated values.
+
+2. Facebook OAuth:
+   - Go to Facebook Developers: https://developers.facebook.com/
+   - Create a new app or select existing.
+   - Add Facebook Login product.
+   - Get App ID and App Secret.
+   - Set Valid OAuth Redirect URIs to: http://localhost:3000/api/auth/callback/facebook (for local dev).
+   - Replace FACEBOOK_ID and FACEBOOK_SECRET in .env.local with the generated values.
+
+3. NextAuth Secret:
+   - Generate a random secret using: openssl rand -base64 32
+   - Or use an online generator like: https://generate-secret.vercel.app/32
+   - Replace NEXTAUTH_SECRET in .env.local.
+
+4. Database:
+   - PostgreSQL is set up in docker-compose.yml.
+   - For production, use a cloud DB like Supabase or Railway.
+
+5. Directus:
+   - Access Directus admin at http://localhost:8055
+   - Login with admin@ai-elearning.pl / admin
+   - Create collections for courses, etc.
+
+6. Backend:
+   - Runs on port 4000.
+   - API endpoints: /api/auth/* for NextAuth, /api/register for password registration.
+
+7. Frontend:
+   - Runs on port 3000.
+   - Dashboard fetches courses from Directus.
+
+To run: docker-compose up --build

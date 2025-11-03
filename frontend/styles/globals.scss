@@ -1,0 +1,329 @@
+@import 'bulma/css/bulma.min.css';
+@import './bulma-overrides.scss';
+
+// CSS Variables for neon violet-blue palette
+:root {
+  --primary: #4b31be;
+  --primary-variant: #3304aa;
+  --accent: #4203c0;
+  --neon-accent: #8A7BFF;
+  --bg-dark: #0B1220;
+  --surface: #FFFFFF;
+  --text: #0B1330;
+  --text-invert: #FFFFFF;
+}
+
+// Global gradient for landing page
+body.landing {
+  background: linear-gradient(135deg, var(--primary) 10%, var(--primary-variant) 50%, var(--accent) 100%);
+  background-attachment: fixed;
+  transition: background-position 1.2s ease, background-color .6s ease;
+}
+
+// Per-section tint overlays
+.section--hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(108, 75, 255, 0.05);
+  pointer-events: none;
+}
+
+.section--features::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(76, 107, 255, 0.03);
+  pointer-events: none;
+}
+
+.section--pricing::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 176, 255, 0.02);
+  pointer-events: none;
+}
+
+// Get Started button styles
+.btn-get-started {
+  height: 56px;
+  padding: 0 32px;
+  font-weight: 700;
+  border-radius: 14px;
+  background: linear-gradient(90deg, var(--primary), var(--primary-variant));
+  color: white;
+  box-shadow: 0 10px 40px rgba(108,75,255,0.18), 0 0 26px rgba(76,107,255,0.12);
+  transition: transform .18s, box-shadow .18s;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-get-started:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 60px rgba(108,75,255,0.26), 0 0 46px rgba(76,107,255,0.18);
+}
+
+.btn-get-started .icon {
+  margin-right: 10px;
+}
+
+// Features card glow + sheen
+.features-card {
+  background: rgba(255,255,255,0.02);
+  border-radius: 12px;
+  padding: 1.6rem;
+  transition: transform .18s ease, box-shadow .2s ease;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(108,75,255,0.1);
+}
+
+.features-card:focus,
+.features-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 22px 60px rgba(76,107,255,0.16), 0 0 36px rgba(108,75,255,0.12);
+  outline: none;
+}
+
+.features-card .sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  transform: translateX(-110%);
+  transition: transform .7s ease;
+}
+
+.features-card:hover .sheen {
+  transform: translateX(110%);
+}
+
+.features-card .icon {
+  display: block;
+  margin: 0 auto 10px;
+  transition: transform .18s, filter .18s;
+}
+
+.features-card:hover .icon {
+  transform: scale(1.08);
+  filter: drop-shadow(0 8px 30px rgba(108,75,255,0.18));
+}
+
+// Contact form input layout
+.input-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.left-icon {
+  width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+}
+
+.input-col {
+  flex: 1;
+}
+
+.input-col input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(11,19,48,0.06);
+  font-size: 1rem;
+}
+
+.input-col input:focus {
+  box-shadow: 0 8px 30px rgba(76,107,255,0.12);
+  border-color: var(--primary);
+  outline: none;
+}
+
+@media (max-width: 720px) {
+  .input-row {
+    flex-direction: column;
+  }
+  .left-icon {
+    order: -1;
+  }
+}
+
+// Consent checkbox variants
+.consent--light .checkbox input:checked + .box {
+  background: linear-gradient(90deg, var(--primary), var(--primary-variant));
+  color: #fff;
+}
+
+.consent--dark .checkbox input:checked + .box {
+  background: var(--bg-dark);
+  box-shadow: 0 8px 30px rgba(108,75,255,0.18);
+  color: var(--primary);
+}
+
+// Social icons
+.social-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform .16s, box-shadow .16s;
+  background: rgba(108,75,255,0.1);
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.social-icon:hover,
+.social-icon:focus {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 12px 40px rgba(108,75,255,0.18), 0 0 20px rgba(76,107,255,0.12);
+  outline: none;
+}
+
+// OAuth buttons
+.oauth-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: transform .18s, box-shadow .18s;
+  text-decoration: none;
+  color: inherit;
+}
+
+.oauth-btn.google {
+  background: #4285f4;
+  color: white;
+}
+
+.oauth-btn.facebook {
+  background: #1877f2;
+  color: white;
+}
+
+.oauth-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+}
+
+// Theme switcher
+.theme-switch {
+  border-radius: 8px;
+  padding: 8px 12px;
+  transition: background-color 0.3s ease;
+}
+
+// Footer blobs background
+.footer {
+  position: relative;
+  overflow: hidden;
+}
+
+.footer::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 20% 80%, rgba(108,75,255,0.1) 0%, transparent 50%),
+              radial-gradient(circle at 80% 20%, rgba(76,107,255,0.1) 0%, transparent 50%),
+              radial-gradient(circle at 40% 40%, rgba(0,176,255,0.05) 0%, transparent 50%);
+  animation: blob-float 20s ease-in-out infinite;
+}
+
+
+@keyframes blob-float {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  33% { transform: translate(30px, -30px) rotate(120deg); }
+  66% { transform: translate(-20px, 20px) rotate(240deg); }
+}
+
+// Toast animations
+.toast-enter {
+  animation: toast-slide-in 0.3s ease-out;
+}
+
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Particle glints
+.particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: var(--primary);
+  border-radius: 50%;
+  animation: particle-glow 3s ease-in-out infinite;
+}
+
+@keyframes particle-glow {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+// Responsive utilities
+@media (max-width: 768px) {
+  .btn-get-started {
+    height: 48px;
+    padding: 0 24px;
+    font-size: 1rem;
+  }
+
+  .features-card {
+    padding: 1.2rem;
+  }
+
+  .social-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .navbar{
+    flex-direction: row;
+  }
+  .navbar-brand{
+    justify-content: center;
+  }
+  .navbar-end{
+    display: flex;
+    justify-content: center;
+  }
+ 
+}
+
+
+.input-col{
+  width: 100% !important;
+}

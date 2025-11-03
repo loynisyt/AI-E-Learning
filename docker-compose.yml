@@ -1,0 +1,68 @@
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ai_elearning_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  directus:
+    image: directus/directus:latest
+    ports:
+      - "8055:8055"
+    environment:
+      KEY: "directus"
+      SECRET: "supersecret"
+      ADMIN_EMAIL: "admin@ai-elearning.pl"
+      ADMIN_PASSWORD: "admin"
+      DB_CLIENT: "pg"
+      DB_HOST: "postgres"
+      DB_PORT: "5432"
+      DB_DATABASE: "ai_elearning_db"
+      DB_USER: "postgres"
+      DB_PASSWORD: "postgres"
+    volumes:
+      - ./directus/data:/data
+    depends_on:
+      - postgres
+
+  backend:
+    build: ./backend
+    ports:
+      - "4000:4000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - RUN_MIGRATE=${RUN_MIGRATE:-false}
+    env_file:
+      - ./.env.local
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    # safe: run migrations only if RUN_MIGRATE=true
+    command: sh -c 'npx prisma generate && if [ "${RUN_MIGRATE}" = "true" ]; then npx prisma migrate deploy && npm run prisma:seed; fi && npm run dev'
+    depends_on:
+      - postgres
+
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL}
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./.env.local
+    volumes:
+      - ./frontend:/app
+    command: npm run dev
+    depends_on:
+      - directus
+      - backend
+
+volumes:
+  postgres_data:

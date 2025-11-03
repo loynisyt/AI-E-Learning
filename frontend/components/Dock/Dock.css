@@ -1,0 +1,187 @@
+.dock {
+  position: fixed;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.dock-bottom {
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.dock-top {
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.dock-left {
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  flex-direction: column;
+}
+
+.dock-right {
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  flex-direction: column;
+}
+
+.dock-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dock-left .dock-inner,
+.dock-right .dock-inner {
+  flex-direction: column;
+}
+
+.dock-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  min-width: 50px;
+  min-height: 50px;
+}
+
+.dock-item:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.dock-item:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.dock-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--primary);
+  font-size: 1.5em;
+}
+
+.dock-item-label {
+  position: absolute;
+  bottom: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.dock-item:hover .dock-item-label {
+  opacity: 1;
+}
+
+.dock-left .dock-item-label,
+.dock-right .dock-item-label {
+  bottom: auto;
+  left: -10px;
+  top: 50%;
+  transform: translateY(-50%) translateX(-100%);
+  white-space: nowrap;
+}
+
+.dock-left .dock-item-label {
+  left: auto;
+  right: -10px;
+  transform: translateY(-50%) translateX(100%);
+}
+
+/* Mobile dock styles */
+.mobile-dock {
+  background: rgba(108, 75, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(108, 75, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(108, 75, 255, 0.2);
+}
+
+.mobile-dock .dock-item {
+  background: rgba(108, 75, 255, 0.1);
+  border: 1px solid rgba(108, 75, 255, 0.2);
+  transition: all 0.3s ease, transform 0.2s ease;
+}
+
+.mobile-dock .dock-item:hover {
+  background: rgba(108, 75, 255, 0.2);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(108, 75, 255, 0.3);
+}
+
+.mobile-dock .dock-item-icon {
+  color: var(--primary);
+}
+
+@media (max-width: 768px) {
+  .dock {
+    padding: 8px;
+    border-radius: 16px;
+  }
+
+  .dock-bottom {
+    bottom: 10px;
+  }
+
+  .dock-top {
+    top: 10px;
+  }
+
+  .dock-left {
+    left: 10px;
+  }
+
+  .dock-right {
+    right: 10px;
+  }
+
+  .dock-inner {
+    gap: 6px;
+  }
+
+  .dock-item {
+    border-radius: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .dock {
+    padding: 6px;
+    border-radius: 12px;
+  }
+
+  .dock-inner {
+    gap: 4px;
+  }
+
+  .mobile-dock .dock-item {
+    min-width: 45px;
+    min-height: 45px;
+  }
+}
