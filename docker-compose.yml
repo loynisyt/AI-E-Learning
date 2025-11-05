@@ -9,6 +9,10 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 10
     networks:
       - ai-elearning-network
 
@@ -32,7 +36,8 @@ services:
       - ./directus/data:/data
       - ./directus/uploads:/directus/uploads
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - ai-elearning-network
 
@@ -43,20 +48,11 @@ services:
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - RUN_MIGRATE=${RUN_MIGRATE:-false}
-      - NEXT_PUBLIC_DIRECTUS_URL=http://directus:8055
+      - DIRECTUS_URL=http://directus:8055
+      - FIREBASE_SERVICE_ACCOUNT_BASE64=${FIREBASE_SERVICE_ACCOUNT_BASE64}
     env_file:
       - ./.env.local
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
-    # safe: run migrations only if RUN_MIGRATE=true
-    command: sh -c 'npx prisma generate && if [ "${RUN_MIGRATE}" = "true" ]; then npx prisma migrate deploy && npm run prisma:seed; fi && npm run dev'
-    depends_on:
-      - postgres
-      - directus
-    networks:
-      - ai-elearning-network
-
+# ...existing code...
   frontend:
     build:
       context: ./frontend
@@ -65,14 +61,20 @@ services:
         NEXT_PUBLIC_DIRECTUS_URL: ${NEXT_PUBLIC_DIRECTUS_URL}
     ports:
       - "3000:3000"
+    environment:
+      - FIREBASE_SERVICE_ACCOUNT_BASE64=${FIREBASE_SERVICE_ACCOUNT_BASE64}
     env_file:
       - ./.env.local
     volumes:
       - ./frontend:/app
     command: npm run dev
     depends_on:
-      - directus
-      - backend
+      postgres:
+        condition: service_healthy
+      directus:
+        condition: service_started
+      backend:
+        condition: service_started
     networks:
       - ai-elearning-network
 

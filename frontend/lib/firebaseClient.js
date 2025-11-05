@@ -1,7 +1,6 @@
 // lib/firebaseClient.js
-import { initializeApp, getApps } from "firebase/app";
-import { getAuth, GoogleAuthProvider, FacebookAuthProvider, signInWithPopup } from "firebase/auth";
-
+import { initializeApp, getApps } from 'firebase/app';
+import { getAuth, GoogleAuthProvider, FacebookAuthProvider, signInWithPopup } from 'firebase/auth';
 
 const clientConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -12,18 +11,13 @@ const clientConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase only on client side
 if (typeof window !== 'undefined' && !getApps().length) {
   initializeApp(clientConfig);
 }
 
 export const getAuthInstance = () => {
-  if (typeof window === 'undefined') {
-    throw new Error('Firebase auth not available on server');
-  }
-  if (!getApps().length) {
-    initializeApp(clientConfig);
-  }
+  if (typeof window === 'undefined') throw new Error('Firebase auth not available on server');
+  if (!getApps().length) initializeApp(clientConfig);
   return getAuth();
 };
 

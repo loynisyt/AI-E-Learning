@@ -1,66 +1,57 @@
 // lib/firebaseAdmin.js
 const admin = require('firebase-admin');
 
-// Initialize Firebase Admin SDK only once
-if (!admin.apps.length) {
-  let serviceAccount;
-
-  // Try to get service account from environment variable
+function loadServiceAccount() {
+  // 1) If user provided full JSON string in env
   if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-    try {
-      // If it's base64 encoded, decode it
-      if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON.includes('-----BEGIN PRIVATE KEY-----')) {
-        serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-      } else {
-        // Assume it's base64 encoded JSON
-        const decoded = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_JSON, 'base64').toString('utf8');
-        serviceAccount = JSON.parse(decoded);
+    const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+    // Try parse directly
+    try { return JSON.parse(raw); }
+    catch (e) {
+      // Try replacing escaped newlines (common when storing in env)
+      try { return JSON.parse(raw.replace(/\\n/g, '\n')); }
+      catch (err) {
+        // If it looks like base64, try decode as base64
+        try {
+          const decoded = Buffer.from(raw, 'base64').toString('utf8');
+          return JSON.parse(decoded);
+        } catch (err2) {
+          throw new Error('Invalid FIREBASE_SERVICE_ACCOUNT_JSON: not valid JSON or base64 JSON');
+        }
       }
-    } catch (error) {
-      console.error('Error parsing FIREBASE_SERVICE_ACCOUNT_JSON:', error);
-      throw new Error('Invalid FIREBASE_SERVICE_ACCOUNT_JSON format');
     }
-  } else if (process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
-    // Use individual environment variables
-    serviceAccount = {
-      type: "service_account",
-      project_id: process.env.FIREBASE_PROJECT_ID,
-      private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
-      private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-      client_email: process.env.FIREBASE_CLIENT_EMAIL,
-      client_id: process.env.FIREBASE_CLIENT_ID,
-      auth_uri: "https://accounts.google.com/o/oauth2/auth",
-      token_uri: "https://oauth2.googleapis.com/token",
-      auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
-      client_x509_cert_url: `https://www.googleapis.com/robot/v1/metadata/x509/${process.env.FIREBASE_CLIENT_EMAIL}`
+  }
+
+  // 2) If user provided base64 explicitly
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
+    try {
+      const decoded = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf8');
+      return JSON.parse(decoded);
+    } catch (e) {
+      throw new Error('Invalid FIREBASE_SERVICE_ACCOUNT_BASE64: not valid base64 JSON');
+    }
+  }
+
+  // 3) Individual env vars fallback
+  const { FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = process.env;
+  if (FIREBASE_PROJECT_ID && FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
+    return {
+      project_id: FIREBASE_PROJECT_ID,
+      client_email: FIREBASE_CLIENT_EMAIL,
+      private_key: FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
     };
-  } else {
-    throw new Error('Firebase service account configuration missing. Please set FIREBASE_SERVICE_ACCOUNT_JSON or individual FIREBASE_* environment variables.');
   }
 
+  throw new Error('Firebase service account configuration missing. Set FIREBASE_SERVICE_ACCOUNT_BASE64 or FIREBASE_SERVICE_ACCOUNT_JSON or individual FIREBASE_* vars.');
+}
+
+const serviceAccount = loadServiceAccount();
+
+if (!admin.apps.length) {
   admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
+    credential: admin.credential.cert(serviceAccount),
   });
+  console.log('Firebase Admin initialized');
 }
 
-const firebaseAdmin = admin;
-
-/**
- * Verify Firebase ID token
- * @param {string} token - The Firebase ID token to verify
- * @returns {Promise<Object>} - The decoded token payload
- */
-async function verifyIdToken(token) {
-  try {
-    const decodedToken = await firebaseAdmin.auth().verifyIdToken(token);
-    return decodedToken;
-  } catch (error) {
-    console.error('Error verifying Firebase token:', error);
-    throw new Error('Invalid Firebase token');
-  }
-}
-
-module.exports = {
-  firebaseAdmin,
-  verifyIdToken
-};
+module.exports = admin;

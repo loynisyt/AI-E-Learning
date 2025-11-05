@@ -4,7 +4,7 @@ const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const OpenAI = require('openai');
-const { authenticateFirebaseToken, requirePermissions, createOrUpdateUserFromFirebase } = require('./lib/auth');
+const { authenticateFirebaseToken, requirePermissions, createOrUpdateUserFromFirebase, verifyIdToken } = require('./lib/auth');
 const { authenticateDirectus, getContent, createContent, updateContent, deleteContent } = require('./lib/directus');
 
 const prisma = new PrismaClient();
@@ -69,6 +69,38 @@ app.post('/api/auth/create-oauth-user', async (req, res) => {
     res.status(201).json({ user });
   } else {
     res.status(200).json({ user: existingUser });
+  }
+});
+
+app.post('/api/auth/session', async (req, res) => {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({ error: 'ID token is required' });
+    }
+
+    // Verify Firebase ID token
+    const decodedToken = await verifyIdToken(idToken);
+
+    // Create or update user in database
+    const user = await createOrUpdateUserFromFirebase(decodedToken);
+
+    // Generate JWT token for session
+    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET || 'your_jwt_secret_here', { expiresIn: '7d' });
+
+    // Set HTTP-only cookie
+    res.cookie('auth-token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
+    res.json({ user: { id: user.id, email: user.email, name: user.name }, token });
+  } catch (error) {
+    console.error('Session creation error:', error);
+    res.status(500).json({ error: 'Authentication failed' });
   }
 });
 
@@ -154,8 +186,8 @@ app.delete('/api/lessons/:id', authenticateFirebaseToken, requirePermissions(['d
   }
 });
 
-// Directus CMS endpoints for educational content
-app.get('/api/content/:collection', authenticateFirebaseToken, requirePermissions(['read']), async (req, res) => {
+// Directus CMS endpoints for educational content (proxy)
+app.get('/api/content/:collection', async (req, res) => {
   try {
     const { collection } = req.params;
     const query = req.query;
@@ -167,7 +199,7 @@ app.get('/api/content/:collection', authenticateFirebaseToken, requirePermission
   }
 });
 
-app.post('/api/content/:collection', authenticateFirebaseToken, requirePermissions(['write']), async (req, res) => {
+app.post('/api/content/:collection', async (req, res) => {
   try {
     const { collection } = req.params;
     const data = req.body;
@@ -179,7 +211,7 @@ app.post('/api/content/:collection', authenticateFirebaseToken, requirePermissio
   }
 });
 
-app.put('/api/content/:collection/:id', authenticateFirebaseToken, requirePermissions(['write']), async (req, res) => {
+app.put('/api/content/:collection/:id', async (req, res) => {
   try {
     const { collection, id } = req.params;
     const data = req.body;
@@ -191,7 +223,7 @@ app.put('/api/content/:collection/:id', authenticateFirebaseToken, requirePermis
   }
 });
 
-app.delete('/api/content/:collection/:id', authenticateFirebaseToken, requirePermissions(['delete']), async (req, res) => {
+app.delete('/api/content/:collection/:id', async (req, res) => {
   try {
     const { collection, id } = req.params;
     await deleteContent(collection, id);

@@ -1,47 +1,60 @@
+// app/api/ai-chat/route.js
+import { NextResponse } from 'next/server';
+import { verifyIdToken } from '@/lib/firebaseAdmin';
+import { verifySession } from '@/lib/jwtServer';
+
 export async function POST(request) {
   try {
-    const { message } = await request.json();
+    const body = await request.json();
+    const { message, mode = 'teacher', temperature = 0.7 } = body || {};
+    if (!message || typeof message !== 'string') return NextResponse.json({ error: 'Missing message' }, { status: 400 });
 
-    // TODO: Replace with real AI provider integration (e.g., OpenAI, Anthropic)
-    // Example: const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    //   method: 'POST',
-    //   headers: {
-    //     'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: JSON.stringify({
-    //     model: 'gpt-3.5-turbo',
-    //     messages: [{ role: 'user', content: message }],
-    //   }),
-    // });
-    // const data = await response.json();
-    // return Response.json({ response: data.choices[0].message.content });
+    // auth: Bearer idToken OR cookie session
+    const authHeader = request.headers.get('authorization') || '';
+    const idTokenMatch = authHeader.match(/^Bearer (.*)$/);
+    let user = null;
 
-    // Mocked responses for demonstration
-    const responses = [
-      "That's a great question! Let me help you understand this concept better.",
-      "Based on what you've learned so far, I recommend practicing with these exercises.",
-      "You're making excellent progress! Keep up the good work.",
-      "Let me break this down for you step by step.",
-      "Have you considered approaching this problem from a different angle?",
-      "That's an interesting perspective. Here's another way to think about it.",
-      "Remember to review the key concepts from the previous lesson.",
-      "You're asking the right questions! That's a sign of deep understanding.",
-      "Let's work through this together. What's your current understanding?",
-      "Great effort! Small consistent steps lead to big improvements.",
-    ];
+    if (idTokenMatch) {
+      try { user = await verifyIdToken(idTokenMatch[1]); } catch (e) { user = null; }
+    }
 
-    const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+    if (!user) {
+      const cookie = request.headers.get('cookie') || '';
+      const sessionPair = cookie.split(';').map(c => c.trim()).find(c => c.startsWith('session='));
+      if (sessionPair) {
+        const token = sessionPair.split('=')[1];
+        try { const payload = verifySession(token); user = { uid: payload.uid, email: payload.email }; } catch (e) { user = null; }
+      }
+    }
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    return Response.json({ response: randomResponse });
-  } catch (error) {
-    console.error('AI Chat API error:', error);
-    return Response.json(
-      { error: 'Failed to process message' },
-      { status: 500 }
-    );
+    const systemPrompt = mode === 'friend'
+      ? 'You are a friendly helpful assistant. Keep replies casual and concise.'
+      : 'You are an expert teacher. Explain clearly, include examples and step-by-step instructions.';
+
+    const openaiResp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` },
+      body: JSON.stringify({
+        model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: message }],
+        temperature: Number(temperature) || 0.7,
+        max_tokens: 900,
+      }),
+    });
+
+    if (!openaiResp.ok) {
+      const t = await openaiResp.text();
+      console.error('OpenAI error', openaiResp.status, t);
+      return NextResponse.json({ error: 'AI provider error' }, { status: 502 });
+    }
+
+    const data = await openaiResp.json();
+    const aiText = data?.choices?.[0]?.message?.content ?? 'No response from AI';
+    return NextResponse.json({ response: aiText });
+  } catch (err) {
+    console.error('ai-chat error', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

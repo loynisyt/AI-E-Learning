@@ -105,5 +105,6 @@ async function createOrUpdateUserFromFirebase(tokenPayload) {
 module.exports = {
   authenticateFirebaseToken,
   requirePermissions,
-  createOrUpdateUserFromFirebase
+  createOrUpdateUserFromFirebase,
+  verifyIdToken
 };

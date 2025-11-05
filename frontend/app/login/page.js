@@ -1,7 +1,6 @@
 'use client';
 export const dynamic = 'force-dynamic';
 import { useState } from 'react';
-import { signIn } from "next-auth/react";
 import { useRouter } from 'next/navigation';
 import { Button, TextField, Alert, CircularProgress } from '@mui/material';
 import Link from 'next/link';
@@ -36,7 +35,7 @@ export default function Login() {
   const handleDirectusSignup = async () => {
     if (!validate()) return;
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_DIRECTUS_URL}/users`, {
+      const response = await fetch('/api/content/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -50,7 +49,7 @@ export default function Login() {
       if (response.ok) {
         setStatus('success');
         // Redirect to login or auto-login
-        await signIn('credentials', { email: formData.email, password: formData.password });
+        // await signIn('credentials', { email: formData.email, password: formData.password });
       } else {
         setStatus('error');
       }
@@ -80,6 +79,7 @@ export default function Login() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ idToken: result.idToken }),
+          credentials: 'include',
         });
 
         if (response.ok) {
@@ -95,10 +95,6 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleOAuth = (provider) => {
-    window.location.href = `/api/auth/oauth/${provider}?redirect=${encodeURIComponent('/dashboard')}`;
   };
 
   return (
@@ -119,9 +115,9 @@ export default function Login() {
                 Something went wrong. Please try again.
               </Alert>
             )}
-          
+
             <hr />
-            <form onSubmit={(e) => { e.preventDefault(); isRegistering ? handleDirectusSignup() : signIn('credentials', formData); }}>
+            <form onSubmit={(e) => { e.preventDefault(); isRegistering ? handleDirectusSignup() : null; }}>
               {isRegistering && (
                 <>
                   <TextField

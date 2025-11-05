@@ -2,7 +2,6 @@
 import './../styles/globals.scss';
 import { usePathname } from 'next/navigation';
 import { ThemeProvider } from '@mui/material/styles';
-import { SessionProvider } from "next-auth/react";
 import { useState, useEffect } from 'react';
 import { useMediaQuery, useTheme } from '@mui/material';
 import AppMenu from '@/components/AppMenu/AppMenu';
@@ -55,35 +54,33 @@ export default function RootLayout({ children }) {
         color: isLandingPage ? '#FFFFFF' : theme.palette.text.primary,
         transition: 'background-color 0.4s ease, color 0.4s ease'
       }}>
-        <SessionProvider>
-          <ThemeProvider theme={theme}>
-            {!isLandingPage && !isMobile && <AppMenu />}
-            {!isLandingPage && !isMobile && (
-              <div style={{
-                position: 'fixed',
-                top: '20px',
-                right: '20px',
-                zIndex: 1000
-              }}>
-                <SettingsThemeSwitch themeMode={themeMode} setThemeMode={setThemeMode} />
-              </div>
-            )}
-            {!isLandingPage && isMobile && (
-              <Dock
-                items={dockItems}
-                position="bottom"
-                onItemClick={handleDockItemClick}
-                className="mobile-dock"
-              />
-            )}
-            <main style={{
-              paddingLeft: !isLandingPage && !isMobile ? '280px' : '0',
-              paddingBottom: !isLandingPage && isMobile ? '100px' : '0'
+        <ThemeProvider theme={theme}>
+          {!isLandingPage && !isMobile && <AppMenu />}
+          {!isLandingPage && !isMobile && (
+            <div style={{
+              position: 'fixed',
+              top: '20px',
+              right: '20px',
+              zIndex: 1000
             }}>
-              {children}
-            </main>
-          </ThemeProvider>
-        </SessionProvider>
+              <SettingsThemeSwitch themeMode={themeMode} setThemeMode={setThemeMode} />
+            </div>
+          )}
+          {!isLandingPage && isMobile && (
+            <Dock
+              items={dockItems}
+              position="bottom"
+              onItemClick={handleDockItemClick}
+              className="mobile-dock"
+            />
+          )}
+          <main style={{
+            paddingLeft: !isLandingPage && !isMobile ? '280px' : '0',
+            paddingBottom: !isLandingPage && isMobile ? '100px' : '0'
+          }}>
+            {children}
+          </main>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -1,35 +1,19 @@
 // lib/directus.js
-const { Directus } = require('@directus/sdk');
+const axios = require('axios');
 
-// Użyj nazwy usługi Docker dla backendu w Compose
-const directusUrl = process.env.NEXT_PUBLIC_DIRECTUS_URL || 'http://directus:8055';
+const DIRECTUS_URL = process.env.DIRECTUS_URL || 'http://directus:8055';
+const TOKEN = process.env.DIRECTUS_STATIC_TOKEN;
 
-// Tworzymy instancję klienta Directus
-const directus = new Directus(directusUrl);
+const client = axios.create({
+  baseURL: `${DIRECTUS_URL}/items`,
+  headers: TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {},
+});
 
 /**
- * Authenticate with Directus using static token or credentials
+ * Authenticate with Directus (no-op for static token)
  */
 async function authenticateDirectus() {
-  try {
-    if (process.env.DIRECTUS_STATIC_TOKEN) {
-      await directus.auth.static(process.env.DIRECTUS_STATIC_TOKEN);
-      console.log('Directus authenticated with static token');
-    } else if (process.env.DIRECTUS_EMAIL && process.env.DIRECTUS_PASSWORD) {
-      await directus.auth.login({
-        email: process.env.DIRECTUS_EMAIL,
-        password: process.env.DIRECTUS_PASSWORD
-      });
-      console.log('Directus authenticated with credentials');
-    } else {
-      console.warn('No Directus authentication configured');
-    }
-  } catch (error) {
-    console.error('Directus authentication failed:', error);
-    if (error?.response) {
-      console.error('Directus response:', error.response);
-    }
-  }
+  console.log('Directus client initialized with static token');
 }
 
 /**
@@ -38,9 +22,10 @@ async function authenticateDirectus() {
  * @param {Object} query - Query parameters
  * @returns {Array} Items from collection
  */
-async function getContent(collection, query = {}) {
+async function getContent(collection, params = {}) {
   try {
-    return await directus.items(collection).readMany(query);
+    const res = await client.get(`/${collection}`, { params });
+    return res.data;
   } catch (error) {
     console.error(`Error fetching ${collection}:`, error);
     throw error;
@@ -55,7 +40,8 @@ async function getContent(collection, query = {}) {
  */
 async function createContent(collection, data) {
   try {
-    return await directus.items(collection).createOne(data);
+    const res = await client.post(`/${collection}`, data);
+    return res.data;
   } catch (error) {
     console.error(`Error creating ${collection}:`, error);
     throw error;
@@ -71,7 +57,8 @@ async function createContent(collection, data) {
  */
 async function updateContent(collection, id, data) {
   try {
-    return await directus.items(collection).updateOne(id, data);
+    const res = await client.patch(`/${collection}/${id}`, data);
+    return res.data;
   } catch (error) {
     console.error(`Error updating ${collection}:`, error);
     throw error;
@@ -85,7 +72,7 @@ async function updateContent(collection, id, data) {
  */
 async function deleteContent(collection, id) {
   try {
-    await directus.items(collection).deleteOne(id);
+    await client.delete(`/${collection}/${id}`);
   } catch (error) {
     console.error(`Error deleting ${collection}:`, error);
     throw error;
@@ -93,7 +80,6 @@ async function deleteContent(collection, id) {
 }
 
 module.exports = {
-  directus,
   authenticateDirectus,
   getContent,
   createContent,
