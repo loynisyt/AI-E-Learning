@@ -19,7 +19,7 @@ export default function Pricing() {
     },
     {
       name: 'Premium',
-      price: '$29',
+      price: '29zł',
       period: 'month',
       features: ['All courses unlocked', 'Priority support', 'Advanced AI tools', 'Certificate of completion'],
       cta: 'Get Premium',
@@ -29,7 +29,7 @@ export default function Pricing() {
     },
     {
       name: 'Premium+',
-      price: '$49',
+      price: '49zł',
       period: 'month',
       features: ['Everything in Premium', '1-on-1 mentoring', 'Exclusive projects', 'Career guidance'],
       cta: 'Get Premium+',

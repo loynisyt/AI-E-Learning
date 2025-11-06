@@ -11,10 +11,12 @@ import {
   LinearProgress,
   useMediaQuery,
   useTheme,
-  Button
+  Button,
+  Collapse,
+  IconButton
 } from '@mui/material';
-
-import AIPanel from '@/components/AIPanel/AIPanel';
+import { ExpandMore, ExpandLess } from '@mui/icons-material';
+import { Crown } from '@/assets/icons';
 import { directus } from '@/lib/directus';
 import { getAuthInstance, signOut as firebaseSignOut } from '@/lib/firebaseClient';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -25,11 +27,12 @@ export default function Dashboard() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  const [user, setUser] = useState(null);       // Firebase User object
+  const [user, setUser] = useState(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [courses, setCourses] = useState([]);
   const [lessons, setLessons] = useState([]);
   const [error, setError] = useState(null);
+  const [navOpen, setNavOpen] = useState(!isMobile);
 
   // Auth listener
   useEffect(() => {
@@ -48,7 +51,6 @@ export default function Dashboard() {
       setUser(u || null);
       setLoadingAuth(false);
 
-
       if (u) {
         try {
           const idToken = await u.getIdToken();
@@ -62,37 +64,31 @@ export default function Dashboard() {
           console.error('Failed to exchange idToken with backend:', err);
         }
       }
-      
     });
 
     return () => unsub();
   }, []);
 
-  // Load data: Directus courses + backend lessons
+  // Load data
   useEffect(() => {
     async function loadData() {
       try {
-        // load courses from Directus if client available
         if (directus && typeof directus.items === 'function') {
           try {
             const coursesResp = await directus.items('courses').readByQuery();
             setCourses(coursesResp?.data ?? []);
           } catch (dErr) {
             console.warn('Directus fetch failed:', dErr);
-            // fallback: leave courses empty
           }
         }
 
-        // load lessons from backend through BACKEND_URL env
         const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
-        if (typeof BACKEND_URL === 'string' && BACKEND_URL.length > 0) {
+        if (BACKEND_URL) {
           try {
             const res = await fetch(`${BACKEND_URL.replace(/\/$/, '')}/api/lessons`);
             if (res.ok) {
               const data = await res.json();
               setLessons(Array.isArray(data) ? data : []);
-            } else {
-              console.warn('Backend lessons fetch failed with status', res.status);
             }
           } catch (bErr) {
             console.warn('Backend lessons fetch error', bErr);
@@ -107,34 +103,35 @@ export default function Dashboard() {
     loadData();
   }, []);
 
-  // handle sign out
   async function handleSignOut() {
     try {
       await firebaseSignOut();
-      // optional: call backend to clear session cookie
-      // await fetch('/api/auth/session', { method: 'DELETE', credentials: 'include' });
       setUser(null);
     } catch (err) {
       console.error('Sign-out failed', err);
     }
   }
 
-  if (loadingAuth) return null; // or a loader component
-
-  // if not authenticated -> show login page (client-only)
+  if (loadingAuth) return null;
   if (!user) return <Login />;
 
+  const navItems = [
+    { label: 'Dashboard', path: '/dashboard' },
+    { label: 'My Learning', path: '/my-learning' },
+    { label: 'Courses', path: '/courses' },
+    { label: 'Notifications', path: '/notifications' },
+    { label: 'Profile', path: '/profile' },
+    { label: 'Settings', path: '/settings' },
+  ];
+
   return (
-    <Box sx={{ p: isMobile ? 2 : 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+    <Box sx={{ p: isMobile ? 2 : 3 }} className="p-6">
+      <Box className="mt-6" sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h4">Dashboard</Typography>
-        <Box>
-          <Typography variant="body2" sx={{ mr: 2, display: 'inline-block' }}>
-            {user.email || user.displayName || 'You'}
-          </Typography>
-          <Button variant="outlined" size="small" onClick={handleSignOut}>Sign out</Button>
-        </Box>
+        
       </Box>
+
+    
 
       {error && (
         <Box sx={{ mb: 2 }}>
@@ -143,64 +140,82 @@ export default function Dashboard() {
       )}
 
       <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
-          <Card>
+        <Grid item xs={12}>
+          <Card sx={{  background: 'linear-gradient(135deg, #8639ebff 0%, #4806abff 40%, #3c16c4ff 100%)', color: 'white', cursor: 'pointer',height:"100%" }} onClick={() => window.location.href = '/settings'}>
             <CardContent>
-              <Typography variant="h6" gutterBottom>My Progress</Typography>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" color="text.secondary">Overall Completion</Typography>
-                <LinearProgress
-                  variant="determinate"
-                  value={65}
-                  sx={{
-                    height: 8,
-                    borderRadius: 4,
-                    mt: 1,
-                    '& .MuiLinearProgress-bar': { borderRadius: 4 },
-                  }}
-                />
-                <Typography variant="body2" sx={{ mt: 1 }}>65% Complete</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box>
+                  <Typography variant="h6">Current Plan: Free</Typography>
+                  <Typography variant="body2">Upgrade for unlimited access</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Button variant="contained" sx={{ backgroundColor: 'white', color: 'black' }}>
+                    Upgrade
+                  </Button>
+                </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>Quick Stats</Typography>
-              <Typography variant="body1"><strong>Courses:</strong> {courses.length}</Typography>
-              <Typography variant="body1"><strong>Lessons:</strong> {lessons.length}</Typography>
+        <Grid item xs={12} md={6}>
+          <Card sx={{ height: '100%', cursor: 'pointer' }} onClick={() => window.location.href = '/my-learning'}>
+            <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Typography variant="h6" gutterBottom>Continue Current Course</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, flexGrow: 1 }}>
+                <Box sx={{ width: 60, height: 40, bgcolor: 'grey.300', mr: 2 }} />
+                <Box>
+                  <Typography variant="body1">Course Title</Typography>
+                  <LinearProgress variant="determinate" value={50} sx={{ mt: 1 }} />
+                  <Typography variant="body2">50% Complete</Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <Card sx={{ height: '100%', cursor: 'pointer' }} onClick={() => window.location.href = '/courses'}>
+            <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Typography variant="h6" gutterBottom>Browse AI Tools</Typography>
+              <Typography variant="body2" sx={{ flexGrow: 1 }}>Explore tools to enhance your learning.</Typography>
+              <Button variant="outlined" sx={{ mt: 1, alignSelf: 'flex-start' }}>Browse</Button>
             </CardContent>
           </Card>
         </Grid>
 
         <Grid item xs={12}>
-          <Card>
+          <Card sx={{ cursor: 'pointer', height:"100%",  }} onClick={() => window.location.href = '/courses'}>
             <CardContent>
-              <Typography variant="h6" gutterBottom>Recent Courses</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {courses.length > 0 ? `You have ${courses.length} courses available.` : 'No courses available yet.'}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>Quick Actions</Typography>
-              <Typography variant="body2" color="text.secondary">Access your learning materials and continue where you left off.</Typography>
+              <Typography variant="h6" gutterBottom>Available Courses</Typography>
+              <Grid container spacing={2}>
+                {courses.slice(0, 3).map(course => (
+                  <Grid item xs={12} sm={4} key={course.id}>
+                    <Card sx={{ height: '100%' }}>
+                      <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <Typography variant="body1" sx={{ flexGrow: 1 }}>{course.title}</Typography>
+                        <LinearProgress variant="determinate" value={30} sx={{ mt: 1 }} />
+                        <Typography variant="body2">30% Complete</Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      {!isMobile && (
-        <Box sx={{ mt: 3 }}>
-          <AIPanel />
+    
+
+        <Box sx={{ alignItems: 'center', mt: 4, justifyContent: 'flex-end' }}>
+          <Typography variant="body2" sx={{ mr: 2 }}>
+            {user.email || user.displayName || 'You'}
+          </Typography>
+          <Button variant="outlined" size="medium"   onClick={handleSignOut}>Sign out</Button>
         </Box>
-      )}
+
+
     </Box>
   );
 }

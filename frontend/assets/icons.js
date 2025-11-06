@@ -47,6 +47,12 @@ export const CheckCircleIcon = () => (
     <path d="M9 12L11 14L15 10" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
+export const CrownIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M4 9L7 4L10 9L13 4L16 9L20 4V20H4V9Z" fill="#8A7BFF"/>
+    <path d="M4 20H20V22H4V20Z" fill="#6C4BFF"/>
+  </svg>
+);
 
 // Instructions:
 // 1. Copy these SVG components to your assets folder as separate .svg files
