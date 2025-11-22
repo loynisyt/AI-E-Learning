@@ -66,6 +66,13 @@ export default function Settings() {
         <Select value={language} onChange={(e) => setLanguage(e.target.value)} fullWidth>
           <MenuItem value="en">English</MenuItem>
           <MenuItem value="pl">Polski</MenuItem>
+          <MenuItem value="es">Español</MenuItem> 
+          <MenuItem value="fr">Français</MenuItem>
+          <MenuItem value="de">Deutsch</MenuItem>
+          <MenuItem value="zh">中文</MenuItem>
+          <MenuItem value="ja">日本語</MenuItem>
+          <MenuItem value="ru">Русский</MenuItem>
+                
         </Select>
       </Box>
 

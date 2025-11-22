@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+  "dev:https": "node https-server.mjs",
+    "setup:https": "mkcert -install && mkcert -cert-file=../certs/localhost-cert.pem -key-file=../certs/localhost-key.pem localhost 127.0.0.1 lcl.host",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -17,6 +19,7 @@
     "@mui/styled-engine-sc": "^7.3.3",
     "@mui/x-date-pickers": "^8.17.0",
     "@prisma/client": "^5.7.0",
+    "@stripe/stripe-js": "^4.0.0",
     "axios": "^1.6.0",
     "bulma": "^1.0.4",
     "date-fns": "^4.1.0",
@@ -29,6 +32,7 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "sass": "^1.93.2",
+    "stripe": "^19.3.1",
     "styled-components": "^6.1.19"
   },
   "devDependencies": {

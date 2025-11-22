@@ -6,6 +6,7 @@ import { Button, TextField, Alert, CircularProgress } from '@mui/material';
 import Link from 'next/link';
 import GoogleIcon from '@mui/icons-material/Google';
 import FacebookIcon from '@mui/icons-material/Facebook';
+import AuthClient from '@/lib/authClient';
 
 export default function Login() {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -32,29 +33,35 @@ export default function Login() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleDirectusSignup = async () => {
+  const handleAuthSignup = async () => {
     if (!validate()) return;
     try {
-      const response = await fetch('/api/content/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          plan: formData.plan,
-        }),
-      });
-      if (response.ok) {
-        setStatus('success');
-        // Redirect to login or auto-login
-        // await signIn('credentials', { email: formData.email, password: formData.password });
-      } else {
-        setStatus('error');
-      }
+      const result = await AuthClient.register(
+        formData.email,
+        `${formData.firstName} ${formData.lastName}`.trim(),
+        formData.password
+      );
+      setStatus('success');
+      setTimeout(() => {
+        setStatus('verify-email');
+      }, 2000);
     } catch (error) {
       console.error('Signup error:', error);
+      setStatus('error');
+    }
+  };
+
+  const handleAuthLogin = async (e) => {
+    e.preventDefault();
+    if (!validate()) return;
+    try {
+      const result = await AuthClient.login(formData.email, formData.password);
+      setStatus('success');
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1000);
+    } catch (error) {
+      console.error('Login error:', error);
       setStatus('error');
     }
   };
@@ -75,7 +82,7 @@ export default function Login() {
 
       if (result) {
         // Send ID token to backend for verification and session creation
-        const response = await fetch('/api/auth/session', {
+        const response = await fetch('https://127.0.0.1:443/api/auth/session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ idToken: result.idToken }),
@@ -107,7 +114,12 @@ export default function Login() {
             </h1>
             {status === 'success' && (
               <Alert severity="success" sx={{ mb: 2 }}>
-                Account created successfully!
+                {isRegistering ? 'Account created! Check your email to verify.' : 'Logged in successfully!'}
+              </Alert>
+            )}
+            {status === 'verify-email' && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Please check your email to verify your account before logging in.
               </Alert>
             )}
             {status === 'error' && (
@@ -117,7 +129,7 @@ export default function Login() {
             )}
 
             <hr />
-            <form onSubmit={(e) => { e.preventDefault(); isRegistering ? handleDirectusSignup() : null; }}>
+            <form onSubmit={isRegistering ? (e) => { e.preventDefault(); handleAuthSignup(); } : handleAuthLogin}>
               {isRegistering && (
                 <>
                   <TextField
@@ -193,7 +205,7 @@ export default function Login() {
 
             </form>
             <p className="has-text-centered" style={{ marginTop: '1rem' }}>
-              {isRegistering ? 'Already have an account?' : "Don't have an account?"}{' '}
+              {isRegistering ? 'Already have an account?' : 'Don\u2019t have an account?'}{' '}
               <Link href="#" onClick={() => setIsRegistering(!isRegistering)}>
                 {isRegistering ? 'Sign In' : 'Create Account'}
               </Link>

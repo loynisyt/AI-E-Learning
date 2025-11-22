@@ -1,0 +1,256 @@
+{
+  "roles": [
+    {
+      "id": "role-admin",
+      "name": "admin",
+      "description": "Administrator systemu z pełnymi uprawnieniami",
+      "permissions": ["manage_users", "manage_courses", "manage_content", "view_reports"]
+    },
+    {
+      "id": "role-student",
+      "name": "student",
+      "description": "Zwykły użytkownik - uczeń",
+      "permissions": ["view_courses", "take_exercises", "track_progress"]
+    }
+  ],
+  "users": [
+    {
+      "id": "VzHixhvjnRWP6bbL4cSt2rvnM1m2",
+      "email": "kubawrobel49@gmail.com",
+      "first_name": "Jakub",
+      "last_name": "Wrobel",
+      "password": "<hashed_password_here>",
+      "role": "role-admin"
+    },
+    {
+      "id": "user-1",
+      "email": "student1@example.com",
+      "first_name": "Jan",
+      "last_name": "Kowalski",
+      "password": "<hashed_password_here>",
+      "role": "role-student"
+    }
+  ],
+  "courses": [
+    {
+      "id": "course-1",
+      "title": "Introduction to Generative AI",
+      "slug": "intro-generative-ai",
+      "description": "Overview of generative AI, tools and applications.",
+      "published": true,
+      "order": 1
+    }
+  ],
+  "lessons": [
+    {
+      "id": "lesson-1",
+      "course_id": "course-1",
+      "title": "What is Generative AI",
+      "slug": "what-is-generative-ai",
+      "subtitle": "High-level concepts and history",
+      "description": "High level intro",
+      "overview": "Short overview of what generative AI is and why it matters.",
+      "video_url": "https://example.com/video.mp4",
+      "duration": "12:34",
+      "order": 1,
+      "published": true,
+      "created_by": "VzHixhvjnRWP6bbL4cSt2rvnM1m2"
+    },
+    {
+      "id": "lesson-2",
+      "course_id": "course-1",
+      "title": "Types of Generative Models",
+      "slug": "types-generative-models",
+      "subtitle": "VAEs, GANs, Autoregressive, Diffusion",
+      "description": "Short overview of common architectures.",
+      "overview": "Compare the main model families and when to use each.",
+      "video_url": "https://example.com/video2.mp4",
+      "duration": "18:20",
+      "order": 2,
+      "published": true,
+      "created_by": "VzHixhvjnRWP6bbL4cSt2rvnM1m2"
+    }
+  ],
+  "modules": [
+    {
+      "id": "module-1",
+      "lesson_id": "lesson-1",
+      "title": "GenAI Basics",
+      "description": "Podstawowe pojęcia i terminologia",
+      "order": 1
+    },
+    {
+      "id": "module-2",
+      "lesson_id": "lesson-2",
+      "title": "Model Families",
+      "description": "Porównanie architektur",
+      "order": 1
+    }
+  ],
+  "submodules": [
+    {
+      "id": "sub-1",
+      "module_id": "module-1",
+      "type": "introduction",
+      "title": "Introduction",
+      "content": "Welcome to Generative AI — objectives and what you'll learn.",
+      "video_url": null,
+      "resources": [],
+      "order": 1
+    },
+    {
+      "id": "sub-2",
+      "module_id": "module-1",
+      "type": "what_is",
+      "title": "What is GenAI?",
+      "content": "Definition and core ideas: generative models, outputs, sampling.",
+      "order": 2
+    },
+    {
+      "id": "sub-3",
+      "module_id": "module-1",
+      "type": "example",
+      "title": "Example",
+      "content": "Short demo generating text and images.",
+      "video_url": "https://example.com/demo-gen.mp4",
+      "order": 3
+    },
+    {
+      "id": "sub-4",
+      "module_id": "module-1",
+      "type": "exercise",
+      "title": "Practical exercise",
+      "content": "Exercise instructions: craft 5 prompts and evaluate outputs.",
+      "resources": ["https://example.com/prompt-guide"],
+      "order": 4
+    },
+    {
+      "id": "sub-5",
+      "module_id": "module-2",
+      "type": "what_is",
+      "title": "VAEs and Autoregressive models",
+      "content": "Summary of VAE and AR models.",
+      "order": 1
+    },
+    {
+      "id": "sub-6",
+      "module_id": "module-2",
+      "type": "what_is",
+      "title": "GANs and Diffusion",
+      "content": "GAN overview and diffusion model intuition.",
+      "order": 2
+    }
+  ],
+  "topics": [
+    {
+      "id": "topic-1",
+      "lesson_id": "lesson-1",
+      "title": "Introduction",
+      "content": "Basic intro",
+      "order": 1
+    },
+    {
+      "id": "topic-2",
+      "lesson_id": "lesson-1",
+      "title": "Key Concepts",
+      "content": "Latent space, sampling, overfitting, metrics",
+      "order": 2
+    },
+    {
+      "id": "topic-3",
+      "lesson_id": "lesson-2",
+      "title": "Model trade-offs",
+      "content": "Pros/cons of GANs vs diffusion vs autoregressive",
+      "order": 1
+    }
+  ],
+  "ai_tools": [
+    {
+      "id": "tool-1",
+      "name": "AI Coach",
+      "slug": "ai-coach",
+      "description": "Personalized teacher that gives feedback on prompts.",
+      "url": "https://ai-coach.example.com",
+      "category": "assistant",
+      "metadata": { "version": "1.0", "capabilities": ["prompt-review", "suggestions"] }
+    },
+    {
+      "id": "tool-2",
+      "name": "ImageGen Pro",
+      "slug": "imagegen-pro",
+      "description": "Image generation service (diffusion-based).",
+      "url": "https://imagegen.example.com",
+      "category": "image",
+      "metadata": { "max_size": "1024x1024", "supports_mask": true }
+    }
+  ],
+  "exercises": [
+    {
+      "id": "exercise-1",
+      "lesson_id": "lesson-1",
+      "title": "Prompting exercise",
+      "instructions": "Practice creating prompts. Submit 5 prompts and annotate expected output type and temperature settings.",
+      "ai_tools": ["tool-1"],
+      "assets": [],
+      "time_estimate": 15,
+      "order": 1
+    },
+    {
+      "id": "exercise-2",
+      "lesson_id": "lesson-2",
+      "title": "Generate an image with ImageGen Pro",
+      "instructions": "Using ImageGen Pro, generate 3 variations of a scene and compare artifacts.",
+      "ai_tools": ["tool-2"],
+      "assets": [],
+      "time_estimate": 25,
+      "order": 1
+    }
+  ],
+  "user_progress": [
+    {
+      "id": "progress-1",
+      "user_id": "user-1",
+      "course_id": "course-1",
+      "lesson_id": "lesson-1",
+      "module_id": "module-1",
+      "submodule_id": "sub-1",
+      "progress": 30,
+      "completed": false,
+      "last_accessed": "2025-07-01T15:00:00.000Z"
+    },
+    {
+      "id": "progress-2",
+      "user_id": "VzHixhvjnRWP6bbL4cSt2rvnM1m2",
+      "course_id": "course-1",
+      "lesson_id": "lesson-1",
+      "module_id": "module-1",
+      "submodule_id": "sub-3",
+      "progress": 80,
+      "completed": false,
+      "last_accessed": "2025-07-02T09:00:00.000Z"
+    }
+  ],
+  "chats": [
+    {
+      "id": "chat-1",
+      "user_id": "user-1",
+      "created_at": "2025-07-03T10:00:00.000Z"
+    }
+  ],
+  "messages": [
+    {
+      "id": "msg-1",
+      "chat_id": "chat-1",
+      "role": "user",
+      "content": "How do I craft a better prompt for images?",
+      "created_at": "2025-07-03T10:01:00.000Z"
+    },
+    {
+      "id": "msg-2",
+      "chat_id": "chat-1",
+      "role": "assistant",
+      "content": "Start with a clear subject, add style references and constraints (size, format).",
+      "created_at": "2025-07-03T10:02:30.000Z"
+    }
+  ]
+}

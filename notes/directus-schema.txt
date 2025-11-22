@@ -1,0 +1,235 @@
+Directus schema (recommended collections)
+
+Overview
+- Purpose: Manage courses/lessons/modules/submodules/topics/exercises/ai_tools and user progress in Directus.
+- Keep ids as string (cuid) to match existing Prisma usage.
+- Files use Directus Files collection and relations for attachments.
+
+Collections (recommended)
+
+1) courses
+- id: string (cuid)
+- title: string
+- slug: string (unique)
+- description: text (Markdown/HTML)
+- cover_image: file (directus files relation)
+- published: boolean
+- metadata: json
+- order: int
+- created_by: users (directus user relation)
+- created_at, updated_at: datetime
+
+2) lessons
+- id: string (cuid)
+- course_id: relation -> courses.id (many lessons to one course)
+- title: string
+- slug: string
+- description: text
+- overview: text
+- video_url: string
+- duration: string
+- order: int
+- published: boolean
+- created_by: users
+- created_at, updated_at
+
+3) modules
+- id: string
+- lesson_id: relation -> lessons.id
+- title: string
+- description: text
+- order: int
+- created_at, updated_at
+
+4) submodules
+- id: string
+- module_id: relation -> modules.id
+- title: string
+- type: string (enum: introduction, what_is, why_use, example, exercise, summary)
+- content: text (rich text)
+- video_url: string (optional)
+- resources: files (m2m relation to directus files)
+- order: int
+- created_at, updated_at
+
+5) topics (compatibility with frontend)
+- id: string
+- lesson_id: relation -> lessons.id
+- title: string
+- content: text
+- order: int
+- created_at, updated_at
+
+Note: You can keep topics as either separate collection or populate topics from submodules via automation/flows. The frontend expects `topics` collection in several places for compatibility.
+
+6) exercises
+- id: string
+- lesson_id: relation -> lessons.id
+- title: string
+- instructions: text
+- ai_tools: m2m relation -> ai_tools (array of ids)
+- assets: files (m2m)
+- time_estimate: int (minutes)
+- order: int
+- created_at, updated_at
+
+7) ai_tools
+- id: string
+- name: string
+- slug: string
+- description: text
+- url: string
+- category: string
+- icon: file
+- metadata: json
+- created_at, updated_at
+
+8) user_progress
+- id: string
+- user_id: relation -> users (Directus user or mapped user table)
+- course_id: relation -> courses.id (optional)
+- lesson_id: relation -> lessons.id (optional)
+- module_id: relation -> modules.id (optional)
+- submodule_id: relation -> submodules.id (optional)
+- progress: int (0-100)
+- completed: boolean
+- last_accessed: datetime
+- updated_at: datetime
+
+9) users & roles
+- Directus already ships with users/roles collections. Map your Prisma users to Directus users via external id or keep them separate and use `user_id` referencing your backend user table when writing user_progress.
+
+Example JSON seeds (minimal)
+
+courses (example)
+[
+  {
+    "id": "course-1",
+    "title": "Introduction to Generative AI",
+    "slug": "intro-generative-ai",
+    "description": "Overview of generative AI, tools and applications.",
+    "published": true,
+    "order": 1
+  }
+]
+
+lessons (example)
+[
+  {
+    "id": "lesson-1",
+    "course_id": "course-1",
+    "title": "What is Generative AI",
+    "slug": "what-is-generative-ai",
+    "description": "High level intro",
+    "video_url": "https://example.com/video.mp4",
+    "order": 1
+  }
+]
+
+modules (example)
+[
+  { "id": "module-1", "lesson_id": "lesson-1", "title": "GenAI Basics", "order": 1 }
+]
+
+submodules (example)
+[
+  { "id": "sub-1", "module_id": "module-1", "type": "introduction", "title": "Introduction", "content": "Welcome...", "order": 1 },
+  { "id": "sub-2", "module_id": "module-1", "type": "what_is", "title": "What is GenAI?", "content": "Definition...", "order": 2 },
+  { "id": "sub-3", "module_id": "module-1", "type": "example", "title": "Example", "content": "...", "order": 3 },
+  { "id": "sub-4", "module_id": "module-1", "type": "exercise", "title": "Practical exercise", "content": "Exercise instructions", "order": 4 }
+]
+
+topics (example - compatibility)
+[
+  { "id": "topic-1", "lesson_id": "lesson-1", "title": "Introduction", "content": "Basic intro" },
+  { "id": "topic-2", "lesson_id": "lesson-1", "title": "Key Concepts", "content": "..." }
+]
+
+ai_tools (example)
+[
+  { "id": "tool-1", "name": "AI Coach", "slug": "ai-coach", "description": "Personalized teacher" }
+]
+
+user_progress (example)
+[
+  { "id": "progress-1", "user_id": "user-1", "course_id": "course-1", "lesson_id": "lesson-1", "progress": 30, "completed": false }
+]
+
+Notes & mapping to Prisma
+- Your current Prisma schema contains `Lesson`, `User`, `Role`, `Chat`, `Message`. To keep Directus and Prisma aligned you can:
+  - Add Prisma models: Course, Module, Submodule, Topic, Exercise, AiTool, UserProgress (see suggested Prisma models below)
+  - Or use Directus as source of truth for content and use Directus API from the backend (safer: keep relational content in Directus, user data in Prisma/Postgres)
+
+Suggested Prisma models (brief)
+model Course {
+  id        String   @id @default(cuid())
+  title     String
+  slug      String   @unique
+  description String?
+  lessons   Lesson[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Module {
+  id       String @id @default(cuid())
+  lessonId String
+  lesson   Lesson @relation(fields: [lessonId], references: [id])
+  title    String
+  order    Int?
+}
+
+model Submodule {
+  id        String @id @default(cuid())
+  moduleId  String
+  module    Module @relation(fields: [moduleId], references: [id])
+  type      String
+  title     String
+  content   String?
+  order     Int?
+}
+
+model Topic {
+  id       String @id @default(cuid())
+  lessonId String
+  lesson   Lesson @relation(fields: [lessonId], references: [id])
+  title    String
+  content  String?
+}
+
+model Exercise {
+  id        String @id @default(cuid())
+  lessonId  String
+  lesson    Lesson @relation(fields: [lessonId], references: [id])
+  title     String
+  instructions String?
+}
+
+model UserProgress {
+  id          String @id @default(cuid())
+  userId      String
+  user        User   @relation(fields: [userId], references: [id])
+  courseId    String?
+  lessonId    String?
+  moduleId    String?
+  submoduleId String?
+  progress    Int    @default(0)
+  completed   Boolean @default(false)
+  updatedAt   DateTime @updatedAt
+}
+
+API usage notes (from codebase)
+- The frontend calls:
+  - directus.items('courses').readByQuery()
+  - directus.items('lessons').readOne(lessonId)
+  - directus.items('topics').readByQuery({ filter: { lesson_id: { _eq: lessonId } } })
+  - directus.items('exercises').readOne(id)
+  - directus.items('ai_tools').readByQuery({ filter: { id: { _in: res.ai_tools } } })
+  - directus.items('user_progress').readByQuery()
+
+Make sure collection names match exactly (courses, lessons, topics, modules, submodules, exercises, ai_tools, user_progress).
+
+Next steps
+- I can generate a Directus import JSON (collections + fields) if you'd like me to produce an importable file for Directus.
+- Or I can create the matching Prisma models and run migrations if you'd prefer content in Postgres via Prisma.
+

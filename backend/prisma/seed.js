@@ -1,87 +1,41 @@
-// prisma/seed.js
-const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcrypt');
-const { createDirectusAdmin } = require('../lib/directusAdmin');
+import { PrismaClient } from '@prisma/client';
+import { hashPassword } from '../lib/auth.js';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding database...');
+  const email = 'user10@gmail.com';
+  const name = 'user';
+  const passwordPlain = 'password123';
 
-  // Seed roles
-  console.log('Creating roles...');
-  const adminRole = await prisma.role.upsert({
-    where: { name: 'admin' },
-    update: {},
-    create: {
-      name: 'admin',
-      description: 'Full system access',
-      permissions: ['read', 'write', 'delete', 'manage_users', 'manage_content']
-    }
+  const hashedPassword = await hashPassword(passwordPlain);
+
+  // Check if user already exists
+  const existingUser = await prisma.user.findUnique({
+    where: { email }
   });
 
-  const instructorRole = await prisma.role.upsert({
-    where: { name: 'instructor' },
-    update: {},
-    create: {
-      name: 'instructor',
-      description: 'Can create and manage educational content',
-      permissions: ['read', 'write', 'delete']
-    }
-  });
-
-  const studentRole = await prisma.role.upsert({
-    where: { name: 'student' },
-    update: {},
-    create: {
-      name: 'student',
-      description: 'Can access educational content',
-      permissions: ['read']
-    }
-  });
-
-  console.log('Roles created');
-
-  // Seed Prisma admin user
-  console.log('Creating Prisma admin user...');
-  const hashedPassword = await bcrypt.hash('Loynis2020@', 10);
-
-  const adminUser = await prisma.user.upsert({
-    where: {
-      email: 'admin@example.com'
-    },
-    update: {
-      name: 'Administrator',
-      password: hashedPassword,
-      provider: 'credentials',
-      roleId: adminRole.id
-    },
-    create: {
-      email: 'admin@example.com',
-      name: 'Administrator',
-      password: hashedPassword,
-      provider: 'credentials',
-      roleId: adminRole.id
-    }
-  });
-
-  console.log('Prisma admin user created/updated:', adminUser.email);
-
-  // Seed Directus admin user (optional)
-  if (process.env.NEXT_PUBLIC_DIRECTUS_URL) {
-    console.log('Creating Directus admin user...');
-    await createDirectusAdmin('admin@example.com', 'Loynis2020@');
+  if (!existingUser) {
+    // Create user
+    const user = await prisma.user.create({
+      data: {
+        email,
+        name,
+        password: hashedPassword,
+        role: {
+          connect: { name: 'student' } // assuming default role named 'student'
+        }
+      }
+    });
+    console.log('Sample user created:', user.email);
   } else {
-    console.log('Directus URL not configured, skipping Directus admin creation');
+    console.log('Sample user already exists:', existingUser.email);
   }
-
-  console.log('Database seeding completed successfully!');
 }
 
 main()
-  .catch((e) => {
-    console.error('Error seeding database:', e);
-    process.exit(1);
+  .catch(e => {
+    console.error(e);
   })
   .finally(async () => {
     await prisma.$disconnect();

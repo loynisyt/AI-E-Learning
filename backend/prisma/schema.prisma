@@ -22,15 +22,58 @@ model User {
   id          String   @id @default(cuid())
   email       String   @unique
   name        String?
-  password    String?
+  password    String?  // Hashed password for email/password authentication
   provider    String   @default("credentials")
   firebaseUid String?  @unique
   roleId      String   @default("student")
   role        Role     @relation(fields: [roleId], references: [id])
+
+  // Email verification
+  emailVerified Boolean @default(false)
+
+  // OAuth provider connections
+  googleId    String?  @unique
+  googleEmail String?
+  facebookId  String?  @unique
+  facebookEmail String?
+
+  // Subscription fields for Stripe
+  subscription          String?   // 'free', 'premium', 'premium-plus'
+  subscriptionStartDate DateTime?
+  stripeCustomerId      String?   @unique
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   lessons     Lesson[]
+  userProgress UserProgress[]
   chats       Chat[]
+  sessions    Session[]
+  emailTokens EmailVerificationToken[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  
+  @@index([userId])
+  @@index([token])
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email     String
+  tokenHash String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  
+  @@index([userId])
+  @@index([email])
 }
 
 model Lesson {
@@ -38,11 +81,16 @@ model Lesson {
   title                String
   description          String
   videoUrl             String?
+  courseId             String?
+  course               Course?  @relation(fields: [courseId], references: [id], onDelete: Cascade)
   exerciseTitle        String?
   exerciseDescription  String?
   links                Json?    // Array of strings
   createdById          String
   createdBy            User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  modules              Module[]
+  topics               Topic[]
+  exercises            Exercise[]
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 }
@@ -62,4 +110,97 @@ model Message {
   role      String   // 'user' or 'assistant'
   content   String
   createdAt DateTime @default(now())
+}
+
+// Content models for courses/learning structure
+model Course {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  description String?
+  coverImage  String?
+  published   Boolean  @default(false)
+  order       Int?     @default(0)
+  lessons     Lesson[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Module {
+  id        String   @id @default(cuid())
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  title     String
+  description String?
+  order     Int?     @default(0)
+  submodules Submodule[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Submodule {
+  id        String   @id @default(cuid())
+  moduleId  String
+  module    Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  type      String   // enum like: introduction, what_is, why_use, example, exercise, summary
+  title     String
+  content   String?
+  videoUrl  String?
+  resources Json?
+  order     Int?     @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Topic {
+  id        String   @id @default(cuid())
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  title     String
+  content   String?
+  order     Int?     @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AiTool {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  description String?
+  url       String?
+  category  String?
+  icon      String?
+  metadata  Json?
+  exercises Exercise[] @relation("ExerciseAiTools")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Exercise {
+  id           String   @id @default(cuid())
+  lessonId     String
+  lesson       Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  title        String
+  instructions String?
+  assets       Json?
+  timeEstimate Int?
+  order        Int?     @default(0)
+  aiTools      AiTool[] @relation("ExerciseAiTools")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model UserProgress {
+  id          String  @id @default(cuid())
+  userId      String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId    String?
+  lessonId    String?
+  moduleId    String?
+  submoduleId String?
+  progress    Int     @default(0)
+  completed   Boolean @default(false)
+  lastAccessed DateTime?
+  updatedAt   DateTime @updatedAt
 }

@@ -146,15 +146,14 @@ export default function CourseDetail() {
                       </Typography>
                     </Box>
                     <Button 
+                      className='ml-3'
                       variant="contained" 
                       href={`/courses/${id}/lesson/${lesson.id}`}
                       sx={{
                         background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
                         color: 'white',
                         boxShadow: '0 3px 5px 2px rgba(118, 75, 162, .3)',
-                        '&:hover': {
-                          background: 'linear-gradient(45deg, #764ba2 30%, #667eea 90%)',
-                        }
+                        
                       }}
                     >
                       Start Learning

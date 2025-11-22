@@ -1,11 +1,29 @@
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const OpenAI = require('openai');
-const { authenticateFirebaseToken, requirePermissions, createOrUpdateUserFromFirebase, verifyIdToken } = require('./lib/auth');
+const fs = require('fs');
+const path = require('path');
+const https = require('https');
+const {
+  authenticateSession,
+  authenticateFirebaseToken,
+  requirePermissions,
+  createOrUpdateUserFromFirebase,
+  verifyIdToken,
+  registerUser,
+  loginUser,
+  verifyEmailToken,
+  connectOAuthProvider,
+  disconnectOAuthProvider,
+  revokeSession,
+  createSession
+} = require('./lib/auth');
 const { authenticateDirectus, getContent, createContent, updateContent, deleteContent } = require('./lib/directus');
+const stripeRoutes = require('./app/api/stripe/route');
 
 const prisma = new PrismaClient();
 const openai = new OpenAI({
@@ -13,13 +31,241 @@ const openai = new OpenAI({
 });
 const app = express();
 
-app.use(cors());
+// CORS Configuration - Allow frontend to reach backend
+const allowedOrigins = [
+  'https://127.0.0.1:443',
+  'https://127.0.0.1:3000',
+  'https://127.0.0.1',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'https://localhost:3000',
+  process.env.FRONTEND_URL || 'https://127.0.0.1:443'
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
 app.use(express.json());
+app.use(cookieParser());
+
+// Mount Stripe routes
+app.use('/api/stripe', stripeRoutes);
 
 // Initialize Directus authentication on startup
 authenticateDirectus();
 
-// Auth endpoints
+// ============ NEW SESSION-BASED AUTH ENDPOINTS ============
+
+/**
+ * POST /api/auth/register
+ * Register a new user with email and password
+ */
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { email, name, password } = req.body;
+
+    if (!email || !password || !name) {
+      return res.status(400).json({ error: 'Email, name, and password are required' });
+    }
+
+    const result = await registerUser(email, name, password);
+
+    // Set session cookie
+    res.cookie('sessionToken', result.session.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
+    res.status(201).json({
+      user: result.user,
+      message: 'Registration successful. Please check your email to verify your account.'
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(400).json({ error: error.message || 'Registration failed' });
+  }
+});
+
+/**
+ * POST /api/auth/login
+ * Login with email and password
+ */
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    const result = await loginUser(email, password);
+
+    // Set session cookie
+    res.cookie('sessionToken', result.session.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
+    res.json({
+      user: result.user,
+      message: 'Login successful'
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(401).json({ error: error.message || 'Login failed' });
+  }
+});
+
+/**
+ * POST /api/auth/verify-email
+ * Verify email with token
+ */
+app.post('/api/auth/verify-email', async (req, res) => {
+  try {
+    const { token, email } = req.body;
+
+    if (!token || !email) {
+      return res.status(400).json({ error: 'Token and email are required' });
+    }
+
+    const user = await verifyEmailToken(token, email);
+
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired verification token' });
+    }
+
+    res.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        emailVerified: user.emailVerified
+      },
+      message: 'Email verified successfully'
+    });
+  } catch (error) {
+    console.error('Email verification error:', error);
+    res.status(500).json({ error: 'Email verification failed' });
+  }
+});
+
+/**
+ * GET /api/auth/session
+ * Get current authenticated user from session
+ */
+app.get('/api/auth/session', authenticateSession, async (req, res) => {
+  try {
+    res.json({
+      user: {
+        id: req.user.id,
+        email: req.user.email,
+        name: req.user.name,
+        emailVerified: req.user.emailVerified,
+        subscription: req.user.subscription,
+        googleId: req.user.googleId || null,
+        facebookId: req.user.facebookId || null
+      }
+    });
+  } catch (error) {
+    console.error('Session fetch error:', error);
+    res.status(500).json({ error: 'Failed to fetch session' });
+  }
+});
+
+/**
+ * POST /api/auth/logout
+ * Logout user and revoke session
+ */
+app.post('/api/auth/logout', authenticateSession, async (req, res) => {
+  try {
+    await revokeSession(req.sessionToken);
+
+    res.clearCookie('sessionToken');
+    res.json({ message: 'Logout successful' });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({ error: 'Logout failed' });
+  }
+});
+
+/**
+ * POST /api/auth/connect-provider
+ * Connect OAuth provider to existing user account
+ */
+app.post('/api/auth/connect-provider', authenticateSession, async (req, res) => {
+  try {
+    const { provider, providerId, providerEmail } = req.body;
+
+    if (!provider || !providerId || !providerEmail) {
+      return res.status(400).json({ error: 'Provider, providerId, and providerEmail are required' });
+    }
+
+    const updatedUser = await connectOAuthProvider(
+      req.user.id,
+      provider.toLowerCase(),
+      providerId,
+      providerEmail
+    );
+
+    res.json({
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        googleId: updatedUser.googleId || null,
+        facebookId: updatedUser.facebookId || null
+      },
+      message: `${provider} account connected successfully`
+    });
+  } catch (error) {
+    console.error('Provider connection error:', error);
+    res.status(400).json({ error: error.message || 'Failed to connect provider' });
+  }
+});
+
+/**
+ * POST /api/auth/disconnect-provider
+ * Disconnect OAuth provider from user account
+ */
+app.post('/api/auth/disconnect-provider', authenticateSession, async (req, res) => {
+  try {
+    const { provider } = req.body;
+
+    if (!provider) {
+      return res.status(400).json({ error: 'Provider is required' });
+    }
+
+    const updatedUser = await disconnectOAuthProvider(req.user.id, provider.toLowerCase());
+
+    res.json({
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        googleId: updatedUser.googleId || null,
+        facebookId: updatedUser.facebookId || null
+      },
+      message: `${provider} account disconnected successfully`
+    });
+  } catch (error) {
+    console.error('Provider disconnection error:', error);
+    res.status(400).json({ error: error.message || 'Failed to disconnect provider' });
+  }
+});
+
+// ============ LEGACY AUTH ENDPOINTS (Backward compatibility) ============
+
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
   const user = await prisma.user.findUnique({
@@ -104,7 +350,8 @@ app.post('/api/auth/session', async (req, res) => {
   }
 });
 
-// Lesson endpoints (Prisma-based)
+// ============ LESSON ENDPOINTS ============
+
 app.get('/api/lessons', async (req, res) => {
   try {
     const lessons = await prisma.lesson.findMany({
@@ -186,7 +433,8 @@ app.delete('/api/lessons/:id', authenticateFirebaseToken, requirePermissions(['d
   }
 });
 
-// Directus CMS endpoints for educational content (proxy)
+// ============ DIRECTUS CMS ENDPOINTS ============
+
 app.get('/api/content/:collection', async (req, res) => {
   try {
     const { collection } = req.params;
@@ -234,7 +482,8 @@ app.delete('/api/content/:collection/:id', async (req, res) => {
   }
 });
 
-// AI Chat endpoint with OpenAI integration
+// ============ AI CHAT ENDPOINT ============
+
 app.post('/api/ai-chat', authenticateFirebaseToken, requirePermissions(['read']), async (req, res) => {
   try {
     const { message, mode = 'teacher', temperature = 0.7 } = req.body;
@@ -266,6 +515,32 @@ app.post('/api/ai-chat', authenticateFirebaseToken, requirePermissions(['read'])
 });
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`Backend server running on port ${PORT}`);
-});
+
+// Check if running in HTTPS mode (development with certificates)
+const certsDir = path.join(__dirname, '..', 'certs');
+const certPath = path.join(certsDir, 'localhost-cert.pem');
+const keyPath = path.join(certsDir, 'localhost-key.pem');
+const useHttps = fs.existsSync(certPath) && fs.existsSync(keyPath);
+
+if (useHttps) {
+  try {
+    const certificate = fs.readFileSync(certPath, 'utf8');
+    const key = fs.readFileSync(keyPath, 'utf8');
+    const httpsServer = https.createServer({ cert: certificate, key }, app);
+    httpsServer.listen(PORT, '127.0.0.1', () => {
+      console.log(`🔒 Backend HTTPS server running on https://127.0.0.1:${PORT}`);
+      console.log(`✅ CORS enabled for: ${allowedOrigins.join(', ')}`);
+    });
+  } catch (error) {
+    console.error('❌ HTTPS setup failed:', error.message);
+    console.log('🔄 Falling back to HTTP...');
+    app.listen(PORT, () => {
+      console.log(`Backend HTTP server running on http://localhost:${PORT}`);
+    });
+  }
+} else {
+  app.listen(PORT, () => {
+    console.log(`Backend HTTP server running on http://localhost:${PORT}`);
+    console.log(`📝 Note: HTTPS certificates not found. To enable HTTPS, create ${certPath} and ${keyPath}`);
+  });
+}

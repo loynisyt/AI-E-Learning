@@ -284,7 +284,7 @@ export default function LessonDetail() {
                     Practice Exercise
                   </Typography>
                   <Typography variant="body1" sx={{ mb: 3 }}>
-                    Apply what you've learned in this interactive exercise. Use the AI tools for guidance and support.
+                    Apply what you have learned in this interactive exercise. Use the AI tools for guidance and support.
                   </Typography>
                   <Box 
                     sx={{ 

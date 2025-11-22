@@ -1,7 +1,7 @@
 // lib/directus.js
 const axios = require('axios');
 
-const DIRECTUS_URL = process.env.DIRECTUS_URL || 'http://directus:8055';
+const DIRECTUS_URL = process.env.DIRECTUS_URL || 'http://localhost:8055';
 const TOKEN = process.env.DIRECTUS_STATIC_TOKEN;
 
 const client = axios.create({
@@ -25,9 +25,9 @@ async function authenticateDirectus() {
 async function getContent(collection, params = {}) {
   try {
     const res = await client.get(`/${collection}`, { params });
-    return res.data;
+    return res.data?.data || [];
   } catch (error) {
-    console.error(`Error fetching ${collection}:`, error);
+    console.error(`Error fetching ${collection}:`, error.response?.data || error.message);
     throw error;
   }
 }
@@ -41,9 +41,9 @@ async function getContent(collection, params = {}) {
 async function createContent(collection, data) {
   try {
     const res = await client.post(`/${collection}`, data);
-    return res.data;
+    return res.data?.data;
   } catch (error) {
-    console.error(`Error creating ${collection}:`, error);
+    console.error(`Error creating ${collection}:`, error.response?.data || error.message);
     throw error;
   }
 }
@@ -58,9 +58,9 @@ async function createContent(collection, data) {
 async function updateContent(collection, id, data) {
   try {
     const res = await client.patch(`/${collection}/${id}`, data);
-    return res.data;
+    return res.data?.data;
   } catch (error) {
-    console.error(`Error updating ${collection}:`, error);
+    console.error(`Error updating ${collection}:`, error.response?.data || error.message);
     throw error;
   }
 }
@@ -74,7 +74,7 @@ async function deleteContent(collection, id) {
   try {
     await client.delete(`/${collection}/${id}`);
   } catch (error) {
-    console.error(`Error deleting ${collection}:`, error);
+    console.error(`Error deleting ${collection}:`, error.response?.data || error.message);
     throw error;
   }
 }
@@ -84,5 +84,5 @@ module.exports = {
   getContent,
   createContent,
   updateContent,
-  deleteContent
+  deleteContent,
 };

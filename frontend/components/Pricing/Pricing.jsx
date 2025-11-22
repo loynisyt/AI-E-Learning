@@ -68,7 +68,7 @@ export default function Pricing() {
                         <li key={i}>✓ {feature}</li>
                       ))}
                     </ul>
-                    <Link href={`/login?plan=${plan.planId}`} passHref>
+                    <Link href={`/checkout?plan=${plan.planId}`} passHref>
                       <Button
                         variant={plan.highlighted ? 'contained' : 'outlined'}
                         color="primary"

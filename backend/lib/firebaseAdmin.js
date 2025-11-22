@@ -54,4 +54,12 @@ if (!admin.apps.length) {
   console.log('Firebase Admin initialized');
 }
 
-module.exports = admin;
+const verifyIdToken = async (idToken) => {
+  if (!idToken) throw new Error('Missing ID token');
+  return admin.auth().verifyIdToken(idToken);
+};
+
+module.exports = {
+  admin,
+  verifyIdToken
+};

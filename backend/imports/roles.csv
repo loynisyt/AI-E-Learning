@@ -1,0 +1,3 @@
+id,name,description,permissions
+role-admin,admin,"Administrator systemu z pełnymi uprawnieniami","[""manage_users"",""manage_courses"",""manage_content"",""view_reports""]"
+role-student,student,"Zwykły użytkownik - uczeń","[""view_courses"",""take_exercises"",""track_progress""]"

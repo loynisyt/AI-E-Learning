@@ -4,7 +4,8 @@ const DIRECTUS_URL = process.env.DIRECTUS_INTERNAL_URL || 'http://directus:8055'
 const TOKEN = process.env.DIRECTUS_STATIC_TOKEN || '';
 
 export async function GET(req, { params }) {
-  const { collection } = params;
+  const resolvedParams = await params;
+  const { collection } = resolvedParams;
   try {
     const url = new URL(req.url);
     const query = url.searchParams;
@@ -22,7 +23,8 @@ export async function GET(req, { params }) {
 }
 
 export async function POST(req, { params }) {
-  const { collection } = params;
+  const resolvedParams = await params;
+  const { collection } = resolvedParams;
   try {
     const body = await req.json();
     const r = await axios({
@@ -39,7 +41,8 @@ export async function POST(req, { params }) {
 }
 
 export async function PUT(req, { params }) {
-  const { collection } = params;
+  const resolvedParams = await params;
+  const { collection } = resolvedParams;
   try {
     const url = new URL(req.url);
     const id = url.searchParams.get('id');
@@ -58,7 +61,8 @@ export async function PUT(req, { params }) {
 }
 
 export async function DELETE(req, { params }) {
-  const { collection } = params;
+  const resolvedParams = await params;
+  const { collection } = resolvedParams;
   try {
     const url = new URL(req.url);
     const id = url.searchParams.get('id');
